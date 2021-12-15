@@ -4,6 +4,7 @@ import { ChainData } from "./ChainData";
 import { Settings } from './Settings';
 import { ValidatorIdentity } from "./Types";
 import { PalletStakingEraRewardPoints } from "@polkadot/types/lookup";
+import { Utility } from "./Utility";
 
 export class NominationData {
 
@@ -22,8 +23,8 @@ export class NominationData {
         return NominationData.instance;
     }
 
-    public clearData(){
-        this.validators=[];
+    public clearData() {
+        this.validators = [];
     }
 
     public async addNominatorToValidator(nom_address: string, val_address: string) {
@@ -80,18 +81,19 @@ export class NominationData {
             const bonded_amount = await this.getBondedAmount(val_address);
             const val_identity = await this.getFormattedIdentity(val_address);
             const commission = await this.getCommission(val_address);
-
-
+            const is_validator = await this.isValidator(val_address);
+            const is_blocked = await this.isBlocked(val_address);
             validator = new Validator(val_address);
 
             validator.setBondedAmount(bonded_amount);
             validator.setIdentity(val_identity);
             validator.setCommission(commission);
-
+            validator.setIntention(is_validator);
+            validator.setBlocked(is_blocked);
 
             this.validators.push(validator);
         } catch {
-            console.log(`Error when creating validator - ${val_address}`);
+            Utility.Logger.error(`Error when creating validator - ${val_address}`);
         };
     }
 
@@ -111,6 +113,34 @@ export class NominationData {
 
         return 0.0;
     }
+    public async isValidator(validator_address: string): Promise<boolean> {
+        let chain_data = ChainData.getInstance();
+        const api = chain_data.getApi();
+
+        if (api == undefined) return false;
+
+        const keys = await api.query.staking.validators.keys();
+        const active_validators = keys.map(({ args: [validatorId] }) =>
+            validatorId.toString()
+        );
+
+        return (active_validators.indexOf(validator_address) > -1);
+    }
+
+
+    //Taken or adapted from the 1KV backend
+    // Gets the validator preferences, and whether or not they block external nominations
+    public async isBlocked(validator: string): Promise<boolean> {
+        let chain_data = ChainData.getInstance();
+        const api = chain_data.getApi();
+
+        if (api == undefined) return true;
+
+        const prefs = (
+            await api.query.staking.validators(validator)
+        )?.blocked.toString();
+        return prefs == "true";
+    };
 
     // Gets the commission for a given validator in a percent format
     private async getCommission(validator: string): Promise<number> {
@@ -212,10 +242,15 @@ export class NominationData {
     public getMaxSelfStake(): number {
         var bond_array = this.validators.map(validator => validator.getBondedAmount());
         bond_array = bond_array.sort((x, y) => x - y);
-   
+
         var low = Math.round(bond_array.length * Settings.remove_outliers);
         var high = bond_array.length - low;
-        
+
+        if (Settings.debug) {
+            Utility.Logger.debug(`Validator bond array low-${low} high-${high}`);
+            Utility.Logger.debug(bond_array);
+        }
+
         return bond_array.slice(low, high).reduce((x, y) => x > y ? x : y);
 
 

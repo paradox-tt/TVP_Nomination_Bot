@@ -1,10 +1,8 @@
-import { min } from "bn.js";
-import { ChainData } from "./ChainData";
 import { NominationData } from "./NominationData";
 import { Nominator } from "./Nominator";
 import { Settings } from "./Settings";
 import { ValidatorIdentity } from "./Types";
-import { Utility } from "./Utility";
+
 
 export class Validator {
 
@@ -14,12 +12,16 @@ export class Validator {
     private val_identity: ValidatorIdentity;
     private era_points: number[];
     private commission: number;
+    private isBlocked:boolean;
+    private isValidator:boolean;
 
     public constructor(val_address: string) {
         this.val_address = val_address;
         this.nominators = [];
         this.val_identity = <ValidatorIdentity>{};
         this.bonded_amount = -1;
+        this.isBlocked=true;
+        this.isValidator=false;
 
         this.era_points = [];
         this.commission = 100;
@@ -43,6 +45,14 @@ export class Validator {
 
     public getParentIdentity() {
         return this.val_identity.name;
+    }
+
+    public getIntent(){
+        return this.isValidator;
+    }
+
+    public getBlockedNominations(){
+        return this.isBlocked;
     }
 
     public getIdentityName() {
@@ -80,18 +90,6 @@ export class Validator {
         });
 
         return result;
-    }
-
-    public setBondedAmount(bonded_ammount: number) {
-        this.bonded_amount = bonded_ammount;
-    }
-
-    public setIdentity(val_identity: ValidatorIdentity) {
-        this.val_identity = val_identity;
-    }
-
-    public setCommission(commission: number) {
-        this.commission = commission;
     }
 
     private getSelfStakeScore():number{
@@ -167,13 +165,33 @@ export class Validator {
 
         return result;
     }
-
+    
     public getValidatorScore(){
         return this.getSelfStakeScore() + 
                this.getEraPointsScore() +
                this.getCommissionScore() +
                this.getNominationScore() +
                this.getNumErasValidationScore();
+    }
+
+    public setIntention(intent:boolean){
+        this.isValidator=intent;
+    }
+
+    public setBlocked(blocked:boolean){
+        this.isBlocked=blocked;
+    }
+
+    public setBondedAmount(bonded_ammount: number) {
+        this.bonded_amount = bonded_ammount;
+    }
+
+    public setIdentity(val_identity: ValidatorIdentity) {
+        this.val_identity = val_identity;
+    }
+
+    public setCommission(commission: number) {
+        this.commission = commission;
     }
 
 }

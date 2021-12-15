@@ -1,4 +1,4 @@
-import { TVP_Candidate } from "./Types";
+import { SettingsFile, TVP_Candidate } from "./Types";
 import { ChainData } from "./ChainData";
 import { Settings } from "./Settings";
 import { Logger } from "tslog";
@@ -6,6 +6,8 @@ import { KeyringPair } from '@polkadot/keyring/types';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { Keyring } from '@polkadot/api';
 import fetch from "node-fetch";
+import * as fs from 'fs';
+import * as rd from 'readline'
 
 export class Utility {
 
@@ -28,17 +30,38 @@ export class Utility {
         return candidates;
     }
 
-    static async getKeyring(seed_phrase: string, deriviation_path: number): Promise<KeyringPair> {
+    static async getKeyring(): Promise<KeyringPair> {
         await cryptoWaitReady();
+      
 
         const keyring = new Keyring({ type: 'sr25519' });
 
-        if (deriviation_path < 0) {
-            return keyring.addFromMnemonic(seed_phrase);
+        if (Settings.derivation_path < 0) {
+            return keyring.addFromMnemonic(Settings.seed_phrase);
         } else {
-            return keyring.createFromUri(`${seed_phrase}//${deriviation_path}`);
+            return keyring.createFromUri(`${Settings.seed_phrase}//${Settings.derivation_path}`);
         }
 
     }
 
+    static async loadSettingsFile(){
+        const rl = rd.createInterface({
+            input: fs.createReadStream(Settings.secret_file)
+        });  
+
+        var json_data = "";
+        for await (const line of rl) {
+            json_data+=line;            
+        }
+
+        var secret_file:SettingsFile = JSON.parse(json_data);
+
+        Settings.seed_phrase = secret_file.seed_phrase;
+        Settings.derivation_path = secret_file.derivation_path;
+        Settings.ws_provider = secret_file.ws_server;
+        
+        if(Settings.debug){
+            console.log(secret_file);
+        }
+    }
 }
