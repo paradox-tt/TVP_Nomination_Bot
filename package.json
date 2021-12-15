@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@polkadot/api": "^6.11.1",
+    "node-fetch": "^2.6.6",
+    "tslog": "^3.3.0"
+  }
+}
