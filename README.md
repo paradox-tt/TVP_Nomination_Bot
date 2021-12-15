@@ -74,5 +74,11 @@ Lists are now created for Partners, Winners and Runner's up.  The system merges 
 <p>It is with great hope that liquid KSM/DOT providers utilize this platform or components thereof to help elect reliable, independant and profitable validators to help further decentralize the active set (by entity).  
 </p>
 
+<h3>Installation</h3>
+<p>The application relies on installation of ts-node, node-fetch@2, ts-log and @polkadot/api.  Once these are installed you may execute using the command
 
+<code>ts-node app.ts</code>
+
+It is recommended that the application is run under systemd.
+ </p>
   <p>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</p>
