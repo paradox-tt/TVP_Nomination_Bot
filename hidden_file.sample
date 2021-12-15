@@ -1,0 +1,5 @@
+{
+    "seed_phrase":"SEED PHRASE HERE",
+    "derivation_path":-1,
+    "ws_server":"wss://rpc node"
+}
