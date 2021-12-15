@@ -47,9 +47,10 @@ List are now created for Partners, Winners and Runner's up.  The system merges t
     <li> Nominable Partners are placed first</li>
     <li> Winners are placed next up to the maximum number of nominations</li>
     <li> If the above two don't meet the maximum number of nominations, then the remaining are taken from the runner's up list</li>
-    
     </ol>
 </p>
 <p>
   <i>Nominable - Validators should have the validator intent and not have their nominations blocked.  If nominations are blocked validators the nominate extrinsic will fail</i>
   </p>
+  
+  <p>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</p>
