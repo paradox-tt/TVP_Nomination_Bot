@@ -6,7 +6,7 @@ This repository is dedicated to the development of a tool to help nominate valid
 How does it work?
 </h3>
 <p>
-The system is designed around three sources of validators.
+The system is designed around three (3) sources of validators.
   <ol>
     <li> Partners - All of these valiators would be nominated providing that they are nominable*.</li>
     <li> Preferred Validators - This is a list of validators that are chosen manually and would rely as a fall-back if there are any issues.  It is recommended to keep this list well populated.</li>
