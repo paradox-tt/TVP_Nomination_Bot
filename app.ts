@@ -2,27 +2,14 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 import { ChainData } from './ChainData';
 import { NominationData } from './NominationData';
 import { Settings } from './Settings';
-import { TVP_Candidate, ValidatorScore } from './Types';
+import { PrettyOutput, TVP_Candidate, ValidatorScore } from './Types';
 import { Utility } from './Utility';
 import { Validator } from './Validator';
 
 
-
-async function getChainPrefix(api: ApiPromise) {
-    const chainInfo = await api.registry.getChainProperties()
-    var result = "0";
-
-    if (chainInfo != null) {
-        result = chainInfo.ss58Format.toString();
-    }
-    return parseInt(result);
-}
-
 async function main() {
 
     let chain_data = ChainData.getInstance();
-    let nomination_data = NominationData.getInstance();
-    var candidates: string[] = [];
 
     //Loads some chain data based information
     const api = await ApiPromise.create({ provider: new WsProvider(Settings.ws_provider) }).then(x => {
@@ -44,65 +31,69 @@ async function main() {
         Utility.Logger.error(err);
     });
 
-
-    //Gets a filtered list of TVP candidates matching desired criteria
-    const tvp_candidates = await filterTVPCandidates().then(x => {
-        Utility.Logger.info(`TVP candidates loaded`);
-        Utility.Logger.info(`Trying to merge candidate arrays...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
-
-    //Combines all stashes into a single array
-    candidates = candidates.concat(tvp_candidates)
-        .concat(Settings.partners)
-        .concat(Settings.preferred_candidates);
-    Utility.Logger.info(`Candidate arrays merged`);
-
-    //Converts each stash into a validator entry
-    await loadValidatorArray(candidates).then(x => {
-        Utility.Logger.info(`Candidates converted to validator objects`);
-        Utility.Logger.info(`Trying to load nomination data...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
-    //Populates nominators for each validator entry
-    await nomination_data.loadNominationData(candidates).then(x => {
-        Utility.Logger.info(`Nomination data loaded`);
-        Utility.Logger.info(`Trying to load era points...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
-    await nomination_data.loadAverageEraPoints().then(x => {
-        Utility.Logger.info(`Era points loaded.`);
-
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
     monitor_session_changes();
 
 }
 
 async function monitor_session_changes() {
-
-    getValidators();
+    await load_supporting_information();
+    await getValidators();
 }
 
-function getValidators(): string[] {
+async function load_supporting_information(){
+    let nomination_data = NominationData.getInstance();
+    var candidates: string[] = [];
+
+        //Gets a filtered list of TVP candidates matching desired criteria
+        const tvp_candidates = await filterTVPCandidates().then(x => {
+            Utility.Logger.info(`TVP candidates loaded`);
+            Utility.Logger.info(`Trying to merge candidate arrays...`);
+            return x;
+        }).catch(err => {
+            Utility.Logger.error(err);
+            return [];
+        });   
+    
+        //Combines all stashes into a single array
+        candidates = candidates.concat(tvp_candidates)
+            .concat(Settings.partners)
+            .concat(Settings.preferred_candidates);
+        Utility.Logger.info(`Candidate arrays merged`);
+    
+        //Converts each stash into a validator entry
+        await loadValidatorArray(candidates).then(x => {
+            Utility.Logger.info(`Candidates converted to validator objects`);
+            Utility.Logger.info(`Trying to load nomination data...`);
+            return x;
+        }).catch(err => {
+            Utility.Logger.error(err);
+            return [];
+        });
+    
+        //Populates nominators for each validator entry
+        await nomination_data.loadNominationData(candidates).then(x => {
+            Utility.Logger.info(`Nomination data loaded`);
+            Utility.Logger.info(`Trying to load era points...`);
+            return x;
+        }).catch(err => {
+            Utility.Logger.error(err);
+            return [];
+        });
+    
+        await nomination_data.loadAverageEraPoints().then(x => {
+            Utility.Logger.info(`Era points loaded.`);
+    
+            return x;
+        }).catch(err => {
+            Utility.Logger.error(err);
+            return [];
+        });
+}
+
+async function getValidators(): Promise<string[]> {
 
     let nomination_data = NominationData.getInstance();
+    let chain_data = ChainData.getInstance();
 
     var sorted_validators = nomination_data.validators.sort((x, y) => x.getValidatorScore() < y.getValidatorScore() ? 1 : -1);
     var winners: ValidatorScore[] = [];
@@ -138,9 +129,21 @@ function getValidators(): string[] {
                         .map(validator => validator.val_address)
     );
 
-    console.log(results);
+    Utility.Logger.info(`Nominations for era ${await chain_data.getCurrentEra()}`);
+    var pretty_output:PrettyOutput[]=[];
+    results.forEach(result=>{
+        pretty_output.push(
+            {
+                val_address:result,
+                identity:nomination_data.validators
+                                        .find(validator=>validator.getAddress()==result)
+                                        .getIdentityName()
+            }   
+        );
+    });
+    console.log(pretty_output);
 
-    return results
+    return results;
 
 }
 
@@ -156,6 +159,16 @@ async function loadValidatorArray(candidates: string[]) {
     await Promise.all(validator_promises).then(x => {
         validator_promises = [];
     });
+}
+
+async function getChainPrefix(api: ApiPromise) {
+    const chainInfo = await api.registry.getChainProperties()
+    var result = "0";
+
+    if (chainInfo != null) {
+        result = chainInfo.ss58Format.toString();
+    }
+    return parseInt(result);
 }
 
 async function filterTVPCandidates(): Promise<string[]> {
@@ -175,7 +188,5 @@ async function filterTVPCandidates(): Promise<string[]> {
         return tvp_candidates.map(tvp_candidate => tvp_candidate.stash);
     });
 }
-
-
 
 main();

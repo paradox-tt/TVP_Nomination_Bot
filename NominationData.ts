@@ -4,7 +4,7 @@ import { ChainData } from "./ChainData";
 import { Settings } from './Settings';
 import { ValidatorIdentity } from "./Types";
 import { PalletStakingEraRewardPoints } from "@polkadot/types/lookup";
-import { validators } from "@polkadot/api-derive/staking";
+
 export class NominationData {
 
     private static instance: NominationData;
@@ -20,6 +20,10 @@ export class NominationData {
         }
 
         return NominationData.instance;
+    }
+
+    public clearData(){
+        this.validators=[];
     }
 
     public async addNominatorToValidator(nom_address: string, val_address: string) {

@@ -73,3 +73,8 @@ export interface TVP_Candidate {
     parent:string;
     score:number;
   }
+
+  export interface PrettyOutput{
+    val_address:string;
+    identity:string;
+  }
