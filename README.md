@@ -8,9 +8,17 @@ How does it work?
 <p>
 The system is designed around three sources of validators.
   <ol>
-    <li> Partners - These validators will always be nominated unless they have blocked nominations or they do not have the validator intent</li>
+    <li> Partners - All of these valiators would be nominated providing that they are nominable*.</li>
     <li> Preferred Validators - This is a list of validators that are chosen manually and would rely as a fall-back if there are any issues.  It is recommended to keep this list well populated.</li>
-    <li> Thousand Validator Canididates - These validators are automatically retrieved from the thousand validator system</li>
+    <li> Thousand Validator Canididates - These validators are automatically retrieved from the thousand validator system.  
+      These candidates must:
+      <ol>
+        <li>Have no faults</li>
+        <li>Issued all pending payouts</li>
+        <li>Not already be part of the active set</li>
+        <li>Commission is within the range as specified</li>
+      </ol>
+    </li>
     </oL>
 
   Validators in referenced lists two (2) and three (3) are all merged together into a single list.  The candidates therein will then be subjected to tests each of which provides a weighted score.  These tests are:
@@ -28,5 +36,20 @@ The system is designed around three sources of validators.
     Nominated Stake - The system prefers a validator set with a normalized stake.  This rewards validators who attempt to attain nominations independently but also protects the nominator against nominating validators with too many nominations. 
   </li>
   </ul>
-  
+  The boundaries of some tests and the weights for each test is configurable in the settings file.
 </p>
+<p>
+With a sorted list of weighted candidates attained, nominable* validators would be selected based on highest score, this list is referred to as the winners.  If any nominable validator exceed the nominated stake threshold or has too many instances already nominated they'll be put into a runner's up list.  These threshold and limits are all configurable in the settings.
+</p>
+<p>
+List are now created for Partners, Winners and Runner's up.  The system merges the final list as follows:
+  <ol>
+    <li> Nominable Partners are placed first</li>
+    <li> Winners are placed next up to the maximum number of nominations</li>
+    <li> If the above two don't meet the maximum number of nominations, then the remaining are taken from the runner's up list</li>
+    
+    </ol>
+</p>
+<p>
+  <i>Nominable - Validators should have the validator intent and not have their nominations blocked.  If nominations are blocked validators the nominate extrinsic will fail</i>
+  </p>
