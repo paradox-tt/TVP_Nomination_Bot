@@ -8,7 +8,7 @@ How does it work?
 <p>
 The system is designed around three (3) sources of validators.
   <ol>
-    <li> Partners - These validators would be nominated providing that they are nominable*.</li>
+    <li> Partners - These validators are always selected providing that they are nominable*.</li>
     <li> Preferred Validators - This is a list of validators that are chosen manually and would rely as a fall-back if there are any issues.  It is recommended to keep this list well populated.</li>
     <li> Thousand Validator Candidates - These validators are automatically retrieved from the thousand validator system.  
       These candidates must:
