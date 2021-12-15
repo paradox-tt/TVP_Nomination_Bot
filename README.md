@@ -9,14 +9,14 @@ How does it work?
 The system is designed around three (3) sources of validators.
   <ol>
     <li> Partners - These validators are always selected providing that they are nominable*.</li>
-    <li> Preferred Validators - This is a list of validators that are chosen manually and specified in Settings.  The system relies on them as a fall-back in the even that there aren't sufficient candidates in the subsequent list.</li>
+    <li> Preferred Validators - This is a list of validators that are chosen manually and specified in Settings.  The system relies on them in the event that there aren't sufficient candidates in the subsequent list (3).</li>
     <li> Thousand Validator Candidates - These validators are automatically retrieved from the thousand validator system.  
       These candidates must:
       <ol>
         <li>Have no faults</li>
         <li>Issued all pending payouts</li>
-        <li>Not already be part of the active set</li>
-        <li>Commission is within the range as specified</li>
+        <li>Not part of the active set at time of the check</li>
+        <li>Commission is within the range as specified in Settings</li>
       </ol>
     </li>
     </oL>
@@ -24,8 +24,8 @@ The system is designed around three (3) sources of validators.
   Validators in referenced lists two (2) and three (3) are all merged together into a single list.  The candidates therein will then be subjected to tests each of which provides a weighted score.  These tests are:
   
   <ul>
-  <li>Self Stake - Self stake is a visible shared risk demonstrated by the validator.  The system prefers validators with higher self-stake and encourages validators to compete to increase their stake. As-to not overly skew comparisons, a setting is provided to help remove outliers.</li>
-  <li>Era's validated - Validators should demonstrate some history of validation relative to the period of analysis.  The system prefers validators with more active validation.  The system provides a setting to set the target and the analysis period.</li>
+  <li>Self Stake - Self stake is a visible and shared risk demonstrated by the validator.  The system prefers validators with higher self-stake and encourages validators to compete to increase their stake. As-to not overly skew comparisons, a setting is provided to help remove outliers.</li>
+  <li>Eras validated - Validators should demonstrate some history of validation relative to the period of analysis.  The system prefers validators with more active validation to a limit set in Settings</li>
   <li>
     Commission - Validators should provide commissions within reasonable ranges.  Those who present commissions on towards the lower boundary of the range would receive a higher score.
   </li>
@@ -39,10 +39,10 @@ The system is designed around three (3) sources of validators.
   The boundaries of some tests, and the weights for each test, is configurable in the settings file.
 </p>
 <p>
-With a sorted list of weighted candidates attained, nominable* validators would be selected based on highest score, this list is referred to as the winners.  If any nominable validator exceed the nominated stake threshold or has too many instances already nominated they'll be put into a runner's up list.  These threshold and limits are all configurable in the settings.
+With a sorted list of weighted candidates attained, nominable* validators would be selected based on highest score, this resultant list is referred to as the winners.  If any nominable validator exceed the nominated stake threshold or has too many instances already nominated they'll be put into a runner's up list.  These threshold and limits are all configurable in the settings.
 </p>
 <p>
-List are now created for Partners, Winners and Runner's up.  The system merges the final list as follows:
+Lists are now created for Partners, Winners and Runner's up.  The system merges the final list as follows:
   <ol>
     <li> Nominable Partners are placed first</li>
     <li> Winners are placed next up to the maximum number of nominations</li>
