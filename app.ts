@@ -1,313 +1,261 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { ChainData } from './ChainData';
-import { NominationData } from './NominationData';
 import { Settings } from './Settings';
-import { PrettyOutput, TVP_Candidate, ValidatorScore } from './Types';
-import { Utility } from './Utility';
+import { Messaging } from './Messaging';
+import { MonitoredData } from './MonitoredData';
+import { encodeAddress } from '@polkadot/util-crypto';
+import { Utility } from "./Utility";
+import { ChainData } from './ChainData';
+import { Nomination } from './Types';
 
 
-//Main function
+/*
+  Monitors for a proxy(announce) event, if it occurs then display a message
+*/
+async function monitorProxyAnnoucements() {
+
+  let monitor = MonitoredData.getInstance();
+  let chain_data = ChainData.getInstance();
+
+  const prefix = chain_data.getPrefix();
+
+  //In the unlikely event that API is undefined then exit by return;
+  const api = chain_data.getApi();
+  if (api == undefined) {
+    return;
+  }
+
+  Messaging.sendMessage('Loading possible proxy assignments..');
+  //Preloads possible candidates
+  Settings.tvp_nominators.forEach(nominator_account => {
+    Utility.getProxyNominees(nominator_account.controller).then(proxy_data => {
+      monitor.addProxyCall({
+        nominator: nominator_account.controller,
+        proxy_info: proxy_data
+      });
+    });
+  });
+
+  Messaging.sendMessage('Waiting for proxy event..');
+
+  api.query.system.events((events) => {
+
+    events.forEach((record) => {
+      // Extract the phase, event and the event types
+      const { event } = record;
+      // If the event is a proxy(annouce)
+      if (api.events.proxy.Announced.is(event)) {
+        //Get the public key from data[0] and then convert to the chain address
+        const nominator_account = encodeAddress(event.data[0], prefix);
+
+        //If the nominator_account is one of the 1KV nominator accounts then
+        if (Settings.tvp_nominators
+          .find(nominator => nominator.controller == nominator_account)) {
+
+          //Retrieve the nominees from the an external source
+          Utility.getProxyNominees(nominator_account).then(proxy_data => {
+            //Adds the proxy call to the monitor singleton which also initates the message
+            monitor.addProxyCall({
+              nominator: nominator_account,
+              proxy_info: proxy_data
+            });
+          });
+        }
+      }
+    });
+  });
+
+}
+
+/*
+  Monitors for a session change event, if the session changes is also and era change
+  then display current nominations, strikingthrough any who are no longer nominated,
+  also increment number of eras that each retained validator is nominating for.
+*/
+async function monitorEraChange() {
+
+  Messaging.sendMessage('Loading current nominations..');
+
+  let chain_data = ChainData.getInstance();
+  let monitor = MonitoredData.getInstance();
+
+  //In the unlikely event that API is undefined then return;
+  const api = chain_data.getApi();
+  if (api == undefined) {
+    return;
+  }
+
+  //Preload nominations on startup
+  chain_data.getCurrentEra().then(era => {
+
+    monitor.setEra(era);
+    //Add to the nominations which will also send a message
+    Settings.tvp_nominators.forEach(nominator => {
+      Utility.getValidatorNominations(nominator.stash).then(nomination_data => {
+        
+        //Updates the previous nomination count for each nominee
+        updateNominationData(nomination_data).then(u_nomination_data=>{
+          monitor.addNomination(u_nomination_data);
+        });
+        
+      });
+    });
+
+  });
+
+  //Start monitoring new session events
+  
+  Messaging.sendMessage('Waiting for new session event..');
+
+  api.query.system.events((events) => {
+
+    events.forEach((record) => {
+      // Extract the phase, event and the event types
+      const { event } = record;
+      // If the event is a new session event then
+      if (api.events.session.NewSession.is(event)) {
+
+        //retrieve the session
+        const current_session = (parseInt(event.data[0].toString()) % 6) + 1;
+
+        if (current_session == 1) {
+
+          //Retrieve the current era
+          chain_data.getCurrentEra().then(era => {
+            monitor.setEra(era);
+
+            //Add the nominations to the monitor, which also sends a message to the channel 
+            Settings.tvp_nominators.forEach(nominator => {
+              Utility.getValidatorNominations(nominator.stash).then(nomination_data => {
+                monitor.addNomination(nomination_data);
+              });
+            });
+
+          });
+        }
+      }
+    });
+  });
+}
+
+/* 
+  This will be used to populate correct 'previous' nomination counts for nominees on first load
+  of the bot, for now do nothing.
+
+  TODO: Read chain data to populate previous nominations
+*/
+async function updateNominationData(nominationData:Nomination):Promise<Nomination> {
+    /*var previous_nominations = await Utility.getPreviousNominations();
+    previous_nominations = previous_nominations.filter(item=>item.address==nominationData.nominator);
+
+    var result:Nomination = {
+      nominator:nominationData.nominator,
+      era:nominationData.era,
+      nominees:[]
+    }*/ 
+    return nominationData;
+}
+
+/*
+    The following method monitors block numbers, if the block number is at the anticipated block number
+    of a proxy call, then send a message to expect a change in the next era.
+
+    In the future this would be expanded to anticipate proxy(announce) calls, if it isn't retrieved in
+    24+lag hours then send a message that something might be wrong.
+*/
+async function monitorProxyChanges() {
+  let monitor = MonitoredData.getInstance();
+  let chain_data = ChainData.getInstance();
+
+  const api = chain_data.getApi();
+  if (api == undefined) {
+    return;
+  }
+
+  await api.rpc.chain.subscribeNewHeads((header) => {
+
+    var block_number: number = parseInt(header.number.unwrap().toString());
+    var proxy_data = monitor.hasProxyCall(block_number);
+
+    if (proxy_data.nominator != undefined) {
+
+      var tvp_nominator = Settings.tvp_nominators.find(nominator => nominator.controller == proxy_data.nominator);
+      var stash = tvp_nominator != undefined ? tvp_nominator.stash : "unknown";
+
+      Messaging.sendMessage(`Proxy call for ${stash}  was executed, changes should be seen in the next era.`);
+      /*
+
+      The code below was used to compare the proxy call to present nomination data it was considered not relevant as the next era this information is shown.
+      It would be left for future development
+
+      if(proxy_data.proxy_info!=undefined)
+        //Messaging.sendMessage(`Proxy call for ${proxy_data.nominator} should be executed at ${proxy_data.proxy_info.number}`);
+
+        var nomination_data:Nomination;
+        nomination_data= monitor.getNominations(proxy_data.nominator);
+        
+        if(nomination_data){
+
+           if(nomination_data.nominees){
+          
+            var nominees = nomination_data.nominees.map(nominee=>nominee.val_address);
+            
+            var proxy_nominations:string[] = proxy_data.proxy_info.targets;
+
+              if(proxy_nominations!=undefined){
+                var difference = nominees.filter(nominee=>proxy_nominations?.indexOf(nominee)<0);
+                
+                if(difference!=undefined){
+                  var percentage_change = (((difference.length*1.0)/(proxy_nominations.length*1.0))*100.00);
+                  percentage_change = 100.00 - percentage_change;
+                  
+
+
+                  //Messaging.sendMessage(`Proxy call for ${proxy_data.nominator} should be executed.</br> The change is a ${percentage_change.toFixed(2)}% match.`);   
+                                 
+                }
+
+              }
+           }
+        }*/
+    }
+  });
+
+}
+
+/*
+  The main function loads variables from an external text file, as a matter of confirmation,
+  the loaded settings are sent to the console.  
+
+  An Api Promise is created and used to initialise the chain data singleton.  
+
+  Three async methods are then executed.
+
+  Monitor Proxy Announcements - This monitors for the proxy(announce) event and invokes an external
+                                undisclosed API for nomination data.
+
+  Monitor Era Change          - This method keeps track of changes of nominations for each nominator account
+                                changes are represented by strikethroughs and an era count is kept.
+
+  Monitor Proxy Changes       - This method anticipates when the proxy(announcement) is called and posts a
+                                message that alerts users to expect a change in nominations within the next era.
+
+                                It was intentionally designed to avoid monitoring of an on-chain event as these events
+                                might fail or never occur.
+*/
+
 async function main() {
 
-    //Load setting.ts with some variable from a file specified in settings
-    await Utility.loadSettingsFile();
+  await Utility.loadVariables();
+  console.log(Settings);
+  const api = await ApiPromise.create({ provider: new WsProvider(Settings.provider) });
 
-    let chain_data = ChainData.getInstance();
-
-    //Creates a connection to an API endpoint specified in settings.
-    const api = await ApiPromise.create({ provider: new WsProvider(Settings.ws_provider) }).then(x => {
-        Utility.Logger.info(`Connected to end point`);
-        Utility.Logger.info(`Trying to set API to singleton and set chain data...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return process.exit(-1);
-    });
-
-    //If there is an issue retrieving the API then exit
-    if (api == undefined) process.exit(-1);
-
-    //load chain data information
-    await getChainPrefix(api).then(prefix => {
-        chain_data.setPrefix(prefix);
-        chain_data.setApi(api);
-        Utility.Logger.info(`API and Chain data set.`);
-    }).catch(err => {
-        Utility.Logger.error(err);
-    });
-
-    //With all data loaded initiate the change of nominations
-    monitor_session_changes();
+  await Utility.initalizeChainData(api).then(x => {
+    monitorProxyAnnoucements();
+    monitorEraChange();
+    monitorProxyChanges();
+  });
 
 }
 
-
-/* Primarily focused on listening for a session event change and switching nominations
-   when the era and session criterias are met
-*/
-
-async function monitor_session_changes() {
-
-    let chain_data = ChainData.getInstance();
-    let api = chain_data.getApi();
-    
-    Utility.Logger.info('Waiting for new session event..');
-    //On the first load set this to 0, validators would be rotated in the next
-    var change_validators = 0;
-
-    //Listen for events
-    api.query.system.events((events) => {
-        //For each event
-        events.forEach((record) => {
-            // Extract the phase, event and the event types
-            const { event } = record;
-            //If the event is a change session event
-            if (api.events.session.NewSession.is(event)) {
-                //Determine the session
-                const current_session = (parseInt(event.data[0].toString()) % 6) + 1;
-                Utility.Logger.info(`Current session is : ${current_session} on ${api.rpc.chain}, there are ${change_validators} before nominations are changed.`);
-
-                //If the session is as specified in the setting
-                if(current_session==Settings.session_to_change){
-                    //If the right era is attained
-                    if(change_validators==0){
-                        //Refresh information, get a set of 24 validators and then nominate them
-                        load_supporting_information().then(x=>{
-                            getValidators().then(validators=>{
-                                nominateValidators(validators);
-                            });
-                        });
-                        //After a change in validators reset the counter
-                        change_validators=Settings.era_to_rotate;
-                    }else{
-                        //If the era is not as desired, then decrease the counter
-                        change_validators--;
-                    }
-                }
-            }
-
-        });
-    });
-}
-
-
-/*  Issues a staking.nominate transaction for a given list of validator stashes
- */
-async function nominateValidators(validator_list:string[]){
-    let chain_data = ChainData.getInstance();
-    let api = chain_data.getApi();
-    const key_ring = await Utility.getKeyring();
-
-    if (api != undefined && key_ring != undefined) {
-        api.tx.staking.nominate(validator_list)
-            .signAndSend(key_ring)
-            .then(x => {
-                Utility.Logger.info('Nominations changed');
-            })
-            .catch(err => {
-                Utility.Logger.error(err);
-            });
-    }
-}
-
-/* Load supporting information before selecting validators,
-   this shall be done before each validator selection.
-*/
-async function load_supporting_information() {
-    
-    let nomination_data = NominationData.getInstance();
-    nomination_data.clearData();//clear any previous data
-
-    var candidates: string[] = [];
-
-    //Gets a filtered list of TVP candidates matching desired criteria
-    const tvp_candidates = await filterTVPCandidates().then(x => {
-        Utility.Logger.info(`TVP candidates loaded`);
-        Utility.Logger.info(`Trying to merge candidate arrays...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
-    //Combines stashes of the tvp and preferred candidates into a single array
-    candidates = candidates.concat(tvp_candidates)
-                           .concat(Settings.preferred_candidates);
-
-    Utility.Logger.info(`Candidate arrays merged`);
-
-    //Converts each stash into a validator object and loads this
-    //into the nomination_data instance
-    await loadValidatorArray(candidates).then(x => {
-        Utility.Logger.info(`Candidates converted to validator objects`);
-        Utility.Logger.info(`Trying to load nomination data...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
-    //Populates nominators for each validator entry
-    await nomination_data.loadNominationData(candidates).then(x => {
-        Utility.Logger.info(`Nomination data loaded`);
-        Utility.Logger.info(`Trying to load era points...`);
-        return x;
-    }).catch(err => {
-        Utility.Logger.error(err);
-        return [];
-    });
-
-    //Populates era points for each validator
-    await nomination_data.loadAverageEraPoints().then(x => {
-        Utility.Logger.info(`Era points loaded.`);
-    }).catch(err => {
-        Utility.Logger.error(err);
-    });
-}
-
-async function getValidators(): Promise<string[]> {
-
-    let nomination_data = NominationData.getInstance();
-
-    var sorted_validators = nomination_data.validators.sort((x, y) => x.getValidatorScore() < y.getValidatorScore() ? 1 : -1);
-    var winners: ValidatorScore[] = [];
-    var runners_up: ValidatorScore[] = [];
-
-    sorted_validators.forEach(validator => {
-        if (winners.filter(added_validator => added_validator.parent == validator.getParentIdentity()).length < Settings.max_nodes_per_validator // Only x nodes per validator
-            && validator.getNominations() < Settings.nomination_threshold // Bonds less than the threshold
-        ) {
-            //If a validator and nominations are not blocked then add to the winners
-            //otherwise don't even add to runners up. 
-            if (validator.getIntent() || !validator.getBlockedNominations()) {
-                winners.push({
-                    val_address: validator.getAddress(),
-                    name: validator.getIdentityName(),
-                    parent: validator.getParentIdentity(),
-                    score: validator.getValidatorScore()
-                });
-            }
-
-        }
-        else {
-            runners_up.push({ val_address: validator.getAddress(), name: validator.getIdentityName(), parent: validator.getParentIdentity(), score: validator.getValidatorScore() });
-        }
-    });
-
-    var results: string[] = await mergeFinalArray(winners,runners_up);
-    showDebugInfo(winners, runners_up);
-    showNominationList(results);
-
-
-    Utility.Logger.info(`(${results.length}) validators obtained`);
-    return results;
-}
-
-async function showNominationList(results:string[]){
-    let nomination_data = NominationData.getInstance();
-    let chain_data = ChainData.getInstance();
-
-    Utility.Logger.info(`Nominations for era ${await chain_data.getCurrentEra()}`);
-    var pretty_output: PrettyOutput[] = [];
-    results.forEach(result => {
-        pretty_output.push(
-            {
-                val_address: result,
-                identity: nomination_data.validators
-                    .find(validator => validator.getAddress() == result)
-                    .getIdentityName()
-            }
-        );
-    });
-    console.log(pretty_output);
-}
-
-async function mergeFinalArray(winners: ValidatorScore[], runners_up: ValidatorScore[]):Promise<string[]> {
-    var results: string[] = [];
-    results = results.concat(await filterPartners())
-        .concat(winners.slice(0, Settings.max_nominations - Settings.partners.length - 1)
-            .map(validator => validator.val_address)
-        );
-    results = results.concat(runners_up.slice(0, Settings.max_nominations - results.length)
-        .map(validator => validator.val_address)
-    );
-
-    return results;
-}
-
-function showDebugInfo(winners: ValidatorScore[], runners_up: ValidatorScore[]) {
-    if (Settings.debug) {
-        Utility.Logger.debug("Winners");
-        console.log(winners);
-        Utility.Logger.debug("Runners up");
-        console.log(runners_up);
-    }
-}
-
-async function filterPartners(): Promise<string[]> {
-    let nomination_data = NominationData.getInstance();
-
-    var filtered_partners: string[] = [];
-    for (var i = 0; i < Settings.partners.length; i++) {
-        const isblocked = await nomination_data.isBlocked(Settings.partners[i]);
-        const isValidator = await nomination_data.isValidator(Settings.partners[i]);
-
-        if (isblocked) {
-            Utility.Logger.warn(`Partner ${Settings.partners[i]} has nominations blocked, skipping.`);
-        }
-        if (!isValidator) {
-            Utility.Logger.warn(`Partner ${Settings.partners[i]} is not a validator, skipping.`);
-        }
-        
-        if (isValidator && !isblocked) {
-            filtered_partners.push(Settings.partners[i]);
-        }
-
-    };
-
-    return filtered_partners;
-}
-
-
-async function loadValidatorArray(candidates: string[]) {
-    let nomination_data = NominationData.getInstance();
-    var validator_promises: any[] = [];
-
-    candidates.forEach(candidate => {
-        validator_promises.push(nomination_data.addValidator(candidate));
-    });
-
-    await Promise.all(validator_promises).then(x => {
-        validator_promises = [];
-    });
-}
-
-async function getChainPrefix(api: ApiPromise) {
-    const chainInfo = await api.registry.getChainProperties()
-    var result = "0";
-
-    if (chainInfo != null) {
-        result = chainInfo.ss58Format.toString();
-    }
-    return parseInt(result);
-}
-
-async function filterTVPCandidates(): Promise<string[]> {
-    return Utility.getCandidates().then(candidates => {
-
-        var tvp_candidates: TVP_Candidate[] = [];
-
-        //Valid canidates only
-        tvp_candidates = candidates.filter(candidate => candidate.valid == true)//Valid candidates
-            .filter(candidate => candidate.faults == 0)//No faults
-            .filter(candidate => candidate.unclaimedEras.length == 0)//All payments processed
-            .filter(candidate => candidate.active == false)//Not already in the active set
-            .filter(candidate => candidate.commission >= Settings.min_commission //Commission is between min and max
-                && candidate.commission <= Settings.max_commission)
-
-
-        return tvp_candidates.map(tvp_candidate => tvp_candidate.stash);
-    });
-}
 
 main();
