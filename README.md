@@ -67,5 +67,25 @@ proxy account for this operation which only has access to switch nominations.
 </p>
 
 It is recommended that the application is run under systemd.
- </p>
-  <p>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</p>
+</p>
+
+<h3>Promotional</h3>
+
+<p>If you like this tool and would like to lend support to the publisher kindly consider nominating my validator nodes
+
+<b>Polkadot</b>
+  <ul><li>PARANODES.IO/01 - 14hM4oLJCK6wtS7gNfwTDhthRjy5QJ1t3NAcoPjEepo9AH67</li></ul>
+
+ <b>Kusama</b> 
+ <ul>
+    <li>PARANODES.IO/01 - H3DL157HL7DkvV2kXocanmKaGXNyQphUDVW33Fnfk8KNhsv</li>
+    <li>PARANODES.IO/02 - HtYny8Eker9VBEKQrtBd6Y5PTkaHQFSvyMFy2bkd66wGBan</li>
+    <li>PARANODES.IO/03 - FkWky3r2bryP3aaAwVWykYrKesAwkDyKZWsDyBvck7YawSi</li>
+    <li>PARANODES.IO/04 - EsNZHmG4bQMGzQNK4Z2CR7Hdhu4or7p2vsLRChUEJcjJAeU</li>
+    <li>PARANODES.IO/05 - EriYFJuqCeBF6SFkKxyQWwaTvT9tcoF9ZGDQ4LX3a1iBsYr</li>
+ </ul>
+</p>
+ 
+<p>
+<b>Primary Identity</b>
+<ul><li>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</li></ul></p>
