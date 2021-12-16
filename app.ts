@@ -51,6 +51,9 @@ async function monitor_session_changes() {
     let chain_data = ChainData.getInstance();
     let api = chain_data.getApi();
     
+    //If there is an issue retrieving the API then exit
+    if (api == undefined) process.exit(-1);
+
     Utility.Logger.info('Waiting for new session event..');
     //On the first load set this to 0, validators would be rotated in the next
     var change_validators = 0;
@@ -68,18 +71,18 @@ async function monitor_session_changes() {
                 Utility.Logger.info(`Current session is : ${current_session} on ${api.rpc.chain}, there are ${change_validators} before nominations are changed.`);
 
                 //If the session is as specified in the setting
-                if(current_session==Settings.session_to_change){
+                if (current_session == Settings.session_to_change) {
                     //If the right era is attained
-                    if(change_validators==0){
+                    if (change_validators == 0) {
                         //Refresh information, get a set of 24 validators and then nominate them
-                        load_supporting_information().then(x=>{
-                            getValidators().then(validators=>{
+                        load_supporting_information().then(x => {
+                            getValidators().then(validators => {
                                 nominateValidators(validators);
                             });
                         });
                         //After a change in validators reset the counter
-                        change_validators=Settings.era_to_rotate;
-                    }else{
+                        change_validators = Settings.era_to_rotate;
+                    } else {
                         //If the era is not as desired, then decrease the counter
                         change_validators--;
                     }
@@ -93,7 +96,7 @@ async function monitor_session_changes() {
 
 /*  Issues a staking.nominate transaction for a given list of validator stashes
  */
-async function nominateValidators(validator_list:string[]){
+async function nominateValidators(validator_list: string[]) {
     let chain_data = ChainData.getInstance();
     let api = chain_data.getApi();
     const key_ring = await Utility.getKeyring();
@@ -114,7 +117,7 @@ async function nominateValidators(validator_list:string[]){
    this shall be done before each validator selection.
 */
 async function load_supporting_information() {
-    
+
     let nomination_data = NominationData.getInstance();
     nomination_data.clearData();//clear any previous data
 
@@ -132,7 +135,7 @@ async function load_supporting_information() {
 
     //Combines stashes of the tvp and preferred candidates into a single array
     candidates = candidates.concat(tvp_candidates)
-                           .concat(Settings.preferred_candidates);
+        .concat(Settings.preferred_candidates);
 
     Utility.Logger.info(`Candidate arrays merged`);
 
@@ -194,7 +197,7 @@ async function getValidators(): Promise<string[]> {
         }
     });
 
-    var results: string[] = await mergeFinalArray(winners,runners_up);
+    var results: string[] = await mergeFinalArray(winners, runners_up);
     showDebugInfo(winners, runners_up);
     showNominationList(results);
 
@@ -203,7 +206,7 @@ async function getValidators(): Promise<string[]> {
     return results;
 }
 
-async function showNominationList(results:string[]){
+async function showNominationList(results: string[]) {
     let nomination_data = NominationData.getInstance();
     let chain_data = ChainData.getInstance();
 
@@ -222,7 +225,7 @@ async function showNominationList(results:string[]){
     console.log(pretty_output);
 }
 
-async function mergeFinalArray(winners: ValidatorScore[], runners_up: ValidatorScore[]):Promise<string[]> {
+async function mergeFinalArray(winners: ValidatorScore[], runners_up: ValidatorScore[]): Promise<string[]> {
     var results: string[] = [];
     results = results.concat(await filterPartners())
         .concat(winners.slice(0, Settings.max_nominations - Settings.partners.length - 1)
@@ -258,7 +261,7 @@ async function filterPartners(): Promise<string[]> {
         if (!isValidator) {
             Utility.Logger.warn(`Partner ${Settings.partners[i]} is not a validator, skipping.`);
         }
-        
+
         if (isValidator && !isblocked) {
             filtered_partners.push(Settings.partners[i]);
         }

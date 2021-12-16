@@ -13,7 +13,7 @@ export class Settings {
 
     static secret_file = 'hidden_file';
     //Shows additional information
-    static debug = false;
+    static debug = true;
 
     static retry_time = 10*60*1000;
 

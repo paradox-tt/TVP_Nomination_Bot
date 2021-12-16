@@ -68,6 +68,10 @@ proxy account for this operation which only has access to switch nominations.
 
 It is recommended that the application is run under systemd.
 </p>
+<h3>Future Development</h3>
+<ul>
+  <li>Output of nominations to a Matrix channel along with their scores as an archive and for audits.</li>
+</ul>
 <hr/>
 <h3>Promotion</h3>
 
