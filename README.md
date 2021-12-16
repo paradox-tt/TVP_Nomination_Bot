@@ -62,6 +62,10 @@ Lists are now created for Partners, Winners and Runner's up.  The system merges 
 
 <code>ts-node app.ts</code>
 
+<p>You will need to configure a private file with a seed phrase, a deriviation path and a ws/wss server in JSON format.  A sample file is provided named hidden_file.sample.  If the account has no deriviation path then use -1.  It is highly recommended that you use a
+proxy account for this operation which only has access to switch nominations.
+</p>
+
 It is recommended that the application is run under systemd.
  </p>
   <p>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</p>
