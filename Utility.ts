@@ -13,23 +13,34 @@ export class Utility {
 
     static Logger: Logger = new Logger();
 
+    //Fetch candidate information from the TVP backend.  
     static async getCandidates(): Promise<TVP_Candidate[]> {
         let monitor = ChainData.getInstance();
         const network = monitor.getChain();
 
         var fetch_result = await fetch(`https://${network}.w3f.community/candidates`);
+        var counter = 0;
 
-        while (fetch_result.status != 200) {
+        //Retry x times with a timeout in between.  If a result is not attained then return an empty set
+        while (fetch_result.status != 200 && counter++ < 5) {
             console.log(`Having trouble finding candidate data, retrying in ${Settings.retry_time / 60000} minute(s)`);
             await new Promise(f => setTimeout(f, Settings.retry_time));
             fetch_result = await fetch(`https://${network}.w3f.community/candidates`);
         }
 
-        var candidates: TVP_Candidate[] = await fetch_result.json();
+        //Default 
+        var candidates: TVP_Candidate[] = [];
 
+        //If the counter wasn't met then return results
+        if(counter<5){
+            candidates = await fetch_result.json();
+        }
+        
         return candidates;
     }
 
+
+    //Get keyring for issuing the staking.nominate extrinsic
     static async getKeyring(): Promise<KeyringPair> {
         await cryptoWaitReady();
       
@@ -43,7 +54,8 @@ export class Utility {
         }
 
     }
-
+    /*  Load Settings.ts with data found in a file of JSON format
+     */
     static async loadSettingsFile(){
         const rl = rd.createInterface({
             input: fs.createReadStream(Settings.secret_file)

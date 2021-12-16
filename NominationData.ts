@@ -15,6 +15,7 @@ export class NominationData {
         this.validators = [];
     }
 
+    //Instantiates
     public static getInstance(): NominationData {
         if (!NominationData.instance) {
             NominationData.instance = new NominationData();
@@ -23,10 +24,12 @@ export class NominationData {
         return NominationData.instance;
     }
 
+    //Clears validator data
     public clearData() {
         this.validators = [];
     }
 
+    //Adds a nominator to a validator by stash
     public async addNominatorToValidator(nom_address: string, val_address: string) {
 
         var val_index = this.validators.findIndex(validator => validator.getAddress() == val_address);
@@ -44,6 +47,8 @@ export class NominationData {
 
     }
 
+    //Loads nominees for each of the validators in the global array
+    //NOTE: Global array must possess validators for async loading
     public async loadNominationData(candidates: string[]) {
         let chain_data = ChainData.getInstance();
         let nomination_data = NominationData.getInstance();
@@ -75,6 +80,7 @@ export class NominationData {
         await Promise.all(nomination_entries);
     }
 
+    //Adds a validator to the global array
     public async addValidator(val_address: string) {
         var validator: Validator;
         try {
@@ -97,6 +103,7 @@ export class NominationData {
         };
     }
 
+    //Gets the self bond for a given stash
     public async getBondedAmount(stash: string): Promise<number> {
         let chain_data = ChainData.getInstance();
         const api = chain_data.getApi();
@@ -113,6 +120,8 @@ export class NominationData {
 
         return 0.0;
     }
+
+    //Determines if the stash has a validator intent
     public async isValidator(validator_address: string): Promise<boolean> {
         let chain_data = ChainData.getInstance();
         const api = chain_data.getApi();
@@ -142,7 +151,7 @@ export class NominationData {
         return prefs == "true";
     };
 
-    // Gets the commission for a given validator in a percent format
+    // Gets the commission for a given validator in a percent format i.e 1-100
     private async getCommission(validator: string): Promise<number> {
         let chain_data = ChainData.getInstance();
         const api = chain_data.getApi();
@@ -159,8 +168,10 @@ export class NominationData {
 
     }
 
-    //The functions below were adopted or adapted from the 1KV backend
-    //Thanks Will!
+    //The function below were adopted or adapted from the 1KV backend, thanks Will!
+    /*
+    
+    */
     public async loadAverageEraPoints() {
         let chain_data = ChainData.getInstance();
         const api = chain_data.getApi();
@@ -234,15 +245,19 @@ export class NominationData {
         } else return { name: raw, is_verified: verified, sub_identity: sub };
     };
 
+    //Used by 1KV function above
     private hex2a(hex: string): string {
         return decodeURIComponent("%" + hex.match(/.{1,2}/g)!.join("%"));
     }
 
     //Gets the max of the average self stake
     public getMaxSelfStake(): number {
+        //Get a list of all self-stakes
         var bond_array = this.validators.map(validator => validator.getBondedAmount());
+        //sort the list
         bond_array = bond_array.sort((x, y) => x - y);
 
+        //determine low and high indicies
         var low = Math.round(bond_array.length * Settings.remove_outliers);
         var high = bond_array.length - low;
 
@@ -250,21 +265,22 @@ export class NominationData {
             Utility.Logger.debug(`Validator bond array low-${low} high-${high}`);
             Utility.Logger.debug(bond_array);
         }
-
+        //Slice the outliers and report the max self-stake of the remaining
         return bond_array.slice(low, high).reduce((x, y) => x > y ? x : y);
 
 
     }
 
-    //Gets the maximum of the average era points
+    //Gets the max of the average era points
     public getMaxEraPoints(): number {
         const era_point_array = this.validators.map(validator => validator.getAverageEraPoints());
         return era_point_array.reduce((x, y) => x > y ? x : y);
     }
 
-    //Get the maximum validator bond
+    //Get the average nominator bond
     public getAvergaeNominatorBond(): number {
         const nominator_bond = this.validators.map(validator => validator.getNominations());
+        //Add all bonds then divide by the total number of bonds
         return nominator_bond.reduce((x, y) => x + y) / nominator_bond.length;
     }
 

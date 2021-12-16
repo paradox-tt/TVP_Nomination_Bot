@@ -5,24 +5,29 @@ import { Settings } from './Settings';
 import { PrettyOutput, TVP_Candidate, ValidatorScore } from './Types';
 import { Utility } from './Utility';
 
+
+//Main function
 async function main() {
 
+    //Load setting.ts with some variable from a file specified in settings
     await Utility.loadSettingsFile();
 
     let chain_data = ChainData.getInstance();
 
-    //Loads some chain data based information
+    //Creates a connection to an API endpoint specified in settings.
     const api = await ApiPromise.create({ provider: new WsProvider(Settings.ws_provider) }).then(x => {
         Utility.Logger.info(`Connected to end point`);
         Utility.Logger.info(`Trying to set API to singleton and set chain data...`);
         return x;
     }).catch(err => {
         Utility.Logger.error(err);
-        return undefined;
+        return process.exit(-1);
     });
 
+    //If there is an issue retrieving the API then exit
     if (api == undefined) process.exit(-1);
 
+    //load chain data information
     await getChainPrefix(api).then(prefix => {
         chain_data.setPrefix(prefix);
         chain_data.setApi(api);
@@ -31,9 +36,15 @@ async function main() {
         Utility.Logger.error(err);
     });
 
+    //With all data loaded initiate the change of nominations
     monitor_session_changes();
 
 }
+
+
+/* Primarily focused on listening for a session event change and switching nominations
+   when the era and session criterias are met
+*/
 
 async function monitor_session_changes() {
 
@@ -44,26 +55,32 @@ async function monitor_session_changes() {
     //On the first load set this to 0, validators would be rotated in the next
     var change_validators = 0;
 
+    //Listen for events
     api.query.system.events((events) => {
-    
+        //For each event
         events.forEach((record) => {
             // Extract the phase, event and the event types
             const { event } = record;
-
+            //If the event is a change session event
             if (api.events.session.NewSession.is(event)) {
-
+                //Determine the session
                 const current_session = (parseInt(event.data[0].toString()) % 6) + 1;
                 Utility.Logger.info(`Current session is : ${current_session} on ${api.rpc.chain}, there are ${change_validators} before nominations are changed.`);
 
+                //If the session is as specified in the setting
                 if(current_session==Settings.session_to_change){
+                    //If the right era is attained
                     if(change_validators==0){
+                        //Refresh information, get a set of 24 validators and then nominate them
                         load_supporting_information().then(x=>{
                             getValidators().then(validators=>{
                                 nominateValidators(validators);
                             });
                         });
+                        //After a change in validators reset the counter
                         change_validators=Settings.era_to_rotate;
                     }else{
+                        //If the era is not as desired, then decrease the counter
                         change_validators--;
                     }
                 }
@@ -73,6 +90,9 @@ async function monitor_session_changes() {
     });
 }
 
+
+/*  Issues a staking.nominate transaction for a given list of validator stashes
+ */
 async function nominateValidators(validator_list:string[]){
     let chain_data = ChainData.getInstance();
     let api = chain_data.getApi();
@@ -90,10 +110,13 @@ async function nominateValidators(validator_list:string[]){
     }
 }
 
+/* Load supporting information before selecting validators,
+   this shall be done before each validator selection.
+*/
 async function load_supporting_information() {
     
     let nomination_data = NominationData.getInstance();
-    nomination_data.clearData();
+    nomination_data.clearData();//clear any previous data
 
     var candidates: string[] = [];
 
@@ -107,13 +130,14 @@ async function load_supporting_information() {
         return [];
     });
 
-    //Combines all stashes into a single array
+    //Combines stashes of the tvp and preferred candidates into a single array
     candidates = candidates.concat(tvp_candidates)
-        .concat(Settings.partners)
-        .concat(Settings.preferred_candidates);
+                           .concat(Settings.preferred_candidates);
+
     Utility.Logger.info(`Candidate arrays merged`);
 
-    //Converts each stash into a validator entry
+    //Converts each stash into a validator object and loads this
+    //into the nomination_data instance
     await loadValidatorArray(candidates).then(x => {
         Utility.Logger.info(`Candidates converted to validator objects`);
         Utility.Logger.info(`Trying to load nomination data...`);
@@ -133,13 +157,11 @@ async function load_supporting_information() {
         return [];
     });
 
+    //Populates era points for each validator
     await nomination_data.loadAverageEraPoints().then(x => {
         Utility.Logger.info(`Era points loaded.`);
-
-        return x;
     }).catch(err => {
         Utility.Logger.error(err);
-        return [];
     });
 }
 

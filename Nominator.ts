@@ -11,11 +11,11 @@ export class Nominator{
     public getAddress(){
         return this.nom_address;
     }
-
+    //Accessor for bond
     public getBondedAmount(){
         return this.bonded_amount;
     }
-
+    //Mutator for bond
     public setBondedAmount(bonded_ammount:number){
         this.bonded_amount = bonded_ammount;
     }
