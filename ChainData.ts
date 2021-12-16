@@ -4,11 +4,13 @@ export class ChainData {
     private static instance: ChainData;
     private chain:string;
     private prefix:number;
+    private era:number;
     private api:ApiPromise|undefined;
 
     private constructor() { 
         this.prefix=-1;
         this.chain="";
+        this.era=-1;
         this.api = undefined;
     }
 
@@ -30,6 +32,10 @@ export class ChainData {
         }
     }
 
+    public setEra(era:number){
+        this.era=era;
+    }
+
     public getPrefix(){
         return this.prefix;
     }
@@ -38,19 +44,8 @@ export class ChainData {
         return this.chain;
     }
 
-    public async getCurrentEra(){
-        
-        const api = await this.getApi();
-
-        if(api==undefined){
-            return -1;
-        }else{
-            return parseInt((await api.query.staking.activeEra())
-                                                    .unwrapOrDefault()
-                                                    .index.toString());
-        }
-
-
+    public getEra(){
+        return this.era;
     }
 
     public setApi(api:ApiPromise){
@@ -61,5 +56,15 @@ export class ChainData {
         
         return this.api;
     }
+    // Gets the curent era
+    public async getCurrentEra(){
+        let chain_data = ChainData.getInstance();
+        const api = chain_data.getApi();
+        
+        if(api==undefined)
+            return;
 
+        const currentEra = await api.query.staking.currentEra();
+        return Number(currentEra);
+    };
 }
