@@ -53,7 +53,7 @@ Lists are now created for Partners, Winners and Runner's up.  The system merges 
   <i>Nominable - Validators should have the validator intent and not have their nominations blocked.  If nominations are blocked validators the nominate extrinsic will fail</i>
   </p>
   
-<h3>Goals</h3>
+<h3>Goal</h3>
 <p>It is with great hope that liquid KSM/DOT providers utilize this platform or components thereof to help elect reliable, independant and profitable validators to help further decentralize the active set (by entity).  
 </p>
 
