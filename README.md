@@ -68,10 +68,10 @@ proxy account for this operation which only has access to switch nominations.
 
 It is recommended that the application is run under systemd.
 </p>
+<hr/>
+<h3>Promotion</h3>
 
-<h3>Promotional</h3>
-
-<p>If you like this tool and would like to lend support to the publisher kindly consider nominating my validator nodes
+<p>If you like this tool and would like to lend support to the developer kindly consider nominating my validator nodes
 
 <b>Polkadot</b>
   <ul><li>PARANODES.IO/01 - 14hM4oLJCK6wtS7gNfwTDhthRjy5QJ1t3NAcoPjEepo9AH67</li></ul>
