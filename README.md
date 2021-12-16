@@ -53,23 +53,6 @@ Lists are now created for Partners, Winners and Runner's up.  The system merges 
   <i>Nominable - Validators should have the validator intent and not have their nominations blocked.  If nominations are blocked validators the nominate extrinsic will fail</i>
   </p>
   
-  <p>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</p>
-
-<p>
-With a sorted list of weighted candidates attained, nominable* validators would be selected based on highest score, this resultant list is referred to as the winners.  If any nominable validator exceed the nominated stake threshold or has too many instances already nominated they'll be put into a runner's up list.  These threshold and limits are all configurable in the settings.
-</p>
-<p>
-Lists are now created for Partners, Winners and Runner's up.  The system merges the final list as follows:
-  <ol>
-    <li> Nominable Partners are placed first</li>
-    <li> Winners are placed next up to the maximum number of nominations</li>
-    <li> If the above two don't meet the maximum number of nominations, then the remaining are taken from the runner's up list</li>
-    </ol>
-</p>
-<p>
-  <i>Nominable - Validators should have the validator intent and not have their nominations blocked.  If nominations are blocked validators the nominate extrinsic will fail</i>
-  </p>
-  
 <h3>Goals</h3>
 <p>It is with great hope that liquid KSM/DOT providers utilize this platform or components thereof to help elect reliable, independant and profitable validators to help further decentralize the active set (by entity).  
 </p>
