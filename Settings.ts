@@ -25,13 +25,17 @@ export class Settings {
 
     //If a validator has > the threshold they would be placed in the runners up list
     //as they can independently enter the active set
-    static nomination_threshold = 20000;
+    static nomination_threshold = 25000;
 
     static min_commission = 0.0;
 
     static max_commission = 2.0;
 
     static session_to_change = 4;
+
+    //How many block after the session begins to check nomination status
+    //this can be useful to prevent double nominations numbers between 0 and 50 are advised
+    static block_offset = 0;
 
     static era_to_rotate = 3;
 
